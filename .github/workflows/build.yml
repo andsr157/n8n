@@ -1,0 +1,44 @@
+name: Deploy Traefik
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH and Docker Context
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GI_SSH_PRIVATE_KEY }}" > ~/.ssh/ssh_new.pem
+          chmod 600 ~/.ssh/ssh_new.pem
+          
+          # Configure SSH
+          echo "Host ${{ secrets.GI_DEPLOY_HOST }}" >> ~/.ssh/config
+          echo "  HostName ${{ secrets.GI_DEPLOY_HOST }}" >> ~/.ssh/config
+          echo "  User ${{ secrets.GI_DEPLOY_USER }}" >> ~/.ssh/config
+          echo "  IdentityFile ~/.ssh/ssh_new.pem" >> ~/.ssh/config
+          echo "  StrictHostKeyChecking no" >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Setup Docker Context
+        run: |
+          docker context create remote --docker "host=ssh://${{ secrets.GI_DOCKER_HOST }}" 
+          docker context use remote
+
+      - name: Deploy N8N
+        run: |
+          export DB_HOST="${{ secrets.GI_DB_HOST }}"
+
+          docker compose -f compose.prod.yml up -d
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker context rm remote -f || true
+          rm -f ~/.ssh/ssh_new.pem
