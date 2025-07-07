@@ -33,7 +33,7 @@ jobs:
 
       - name: Deploy N8N
         run: |
-          export DOMAIN="${{ secrets.GI_DOMAIN }}"
+          export DOMAIN_NAME="${{ secrets.GI_DOMAIN }}"
           export SUBDOMAIN="${{ secrets.GI_SUBDOMAIN }}"
 
           docker compose -f compose.prod.yml up -d
